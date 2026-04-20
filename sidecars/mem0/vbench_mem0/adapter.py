@@ -93,9 +93,17 @@ class Mem0Adapter:
             "supported_retrieval_modes": sorted(SUPPORTED_MODES),
             "backing_store": "postgres",
             "supports_user_scoping": True,
-            "supports_session_scoping": True,
+            # Writes tag memories with agent_id=session_id, but Mem0 OSS's
+            # search() does not filter by agent_id, so end-to-end session
+            # isolation is NOT enforced. We advertise False to prevent the
+            # engine's isolation audits from trusting a guarantee the read
+            # path does not provide.
+            "supports_session_scoping": False,
             "declared_cost_model": None,
-            "extra": {},
+            "extra": {
+                "session_scoping_on_write": True,
+                "session_scoping_on_read": False,
+            },
         }
 
     def health(self) -> None:
@@ -133,6 +141,8 @@ class Mem0Adapter:
         return {
             "provider_id": provider_id,
             "latency_ms": elapsed_ms,
+            # Whitespace-split approximation; replaced with a model-matching
+            # tokenizer as part of v0.1 finish (see TODO.md).
             "tokens_written": len(content.split()),
             "extra": {"raw": result} if isinstance(result, dict) else {},
         }
@@ -188,11 +198,21 @@ class Mem0Adapter:
             "extra": {},
         }
 
-    def enumerate(self, *, user_id: str, session_id: str | None = None) -> list[dict[str, Any]]:
+    def enumerate(
+        self,
+        *,
+        user_id: str,
+        session_id: str | None = None,  # noqa: ARG002 - accepted for API compatibility; Mem0 OSS does not scope get_all by agent_id.
+    ) -> list[dict[str, Any]]:
         raw = self._client.get_all(user_id=user_id)
         return _coerce_items(raw)
 
-    def reset(self, *, user_id: str, session_id: str | None = None) -> None:
+    def reset(
+        self,
+        *,
+        user_id: str,
+        session_id: str | None = None,  # noqa: ARG002 - accepted for API compatibility; Mem0 OSS delete_all is user-scoped only.
+    ) -> None:
         # Upstream mem0 can raise when the user has no memories to delete —
         # we log the failure at warning level so benign no-ops are visible
         # in sidecar logs without aborting the benchmark, but real
