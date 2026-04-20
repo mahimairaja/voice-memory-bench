@@ -42,6 +42,6 @@ jobs:
       - name: uv sync sidecar
         working-directory: sidecars/mem0
         run: uv sync
-      - name: Ruff
+      - name: Ruff (via uvx, not a sidecar dep)
         working-directory: sidecars/mem0
-        run: uv run ruff check vbench_mem0
+        run: uvx ruff check vbench_mem0

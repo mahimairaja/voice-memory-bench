@@ -32,8 +32,8 @@ clean:  ## Remove build outputs
 sidecar-sync:  ## uv sync the Mem0 sidecar environment
 	cd $(SIDECAR_DIR) && $(UV) sync
 
-sidecar-lint:  ## Lint the Mem0 sidecar
-	cd $(SIDECAR_DIR) && $(UV) run ruff check vbench_mem0
+sidecar-lint:  ## Lint the Mem0 sidecar (ruff fetched on demand via uvx)
+	cd $(SIDECAR_DIR) && $(UV) tool run ruff check vbench_mem0
 
 sidecar-test:  ## Run sidecar tests (if any)
 	cd $(SIDECAR_DIR) && $(UV) run pytest -q || true
