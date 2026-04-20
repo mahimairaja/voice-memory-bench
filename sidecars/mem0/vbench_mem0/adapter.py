@@ -100,10 +100,15 @@ class Mem0Adapter:
 
     def health(self) -> None:
         # A round-trip that will raise if the backing store is unreachable.
+        # The raised message is intentionally generic; the full exception
+        # chain is preserved via `from exc` and the traceback is logged for
+        # operators so connection/auth details are available in logs without
+        # being embedded in the error string returned to callers.
         try:
             self._client.get_all(user_id="__vbench_healthcheck__")
         except Exception as exc:  # pragma: no cover - backing outage
-            raise RuntimeError(f"mem0 backing store unhealthy: {exc}") from exc
+            logger.exception("mem0 health check failed")
+            raise RuntimeError("mem0 backing store unhealthy") from exc
 
     # ---------- writes ----------
 

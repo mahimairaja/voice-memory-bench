@@ -207,7 +207,7 @@ func writeManifest(artifactDir string, cfg *schema.RunConfig, runID string) erro
 	return writeJSON(filepath.Join(artifactDir, "manifest.json"), manifest)
 }
 
-func writeJSON(path string, v interface{}) error {
+func writeJSON(path string, v interface{}) (err error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -215,7 +215,11 @@ func writeJSON(path string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)

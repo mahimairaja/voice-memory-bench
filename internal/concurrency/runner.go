@@ -26,7 +26,9 @@ func Run[R any](ctx context.Context, n int, concurrency int, fn Task[R]) []Resul
 	if concurrency < 1 {
 		concurrency = 1
 	}
-	if n == 0 {
+	// n <= 0 means "no work" — guard against make([]Result[R], n) panicking
+	// on a negative length if a caller passes a miscomputed count.
+	if n <= 0 {
 		return nil
 	}
 	results := make([]Result[R], n)

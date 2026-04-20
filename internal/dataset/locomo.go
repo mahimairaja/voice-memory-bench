@@ -102,7 +102,7 @@ type locomoTurnRaw struct {
 // Load parses the LoCoMo JSON into a slice of BenchmarkItems.
 // Each sample becomes one BenchmarkItem; sessions are flattened into a single
 // conversation list with session_id preserved on each turn.
-func (l *LoCoMo) Load(cacheDir, subset string, maxItems int) ([]schema.BenchmarkItem, error) {
+func (l *LoCoMo) Load(cacheDir, subset string, maxItems int) (items []schema.BenchmarkItem, err error) {
 	if !l.IsCached(cacheDir) {
 		return nil, fmt.Errorf("locomo not cached at %s; run `vbench datasets download locomo` first", l.dataPath(cacheDir))
 	}
@@ -110,14 +110,17 @@ func (l *LoCoMo) Load(cacheDir, subset string, maxItems int) ([]schema.Benchmark
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	var raw []locomoRaw
 	if err := json.NewDecoder(f).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decode locomo json: %w", err)
 	}
 
-	var items []schema.BenchmarkItem
 	for i, r := range raw {
 		if maxItems > 0 && len(items) >= maxItems {
 			break
