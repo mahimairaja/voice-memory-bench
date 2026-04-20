@@ -10,7 +10,7 @@ See datasets/custom/README.md for the full schema specification and examples.
 from __future__ import annotations
 
 import pathlib
-from typing import Iterator
+from collections.abc import Iterator
 
 from voice_memory_bench.core.schemas import BenchmarkItem
 

@@ -1,32 +1,32 @@
 """Core abstractions: adapter protocol, pipeline stages, config schema."""
 
 from voice_memory_bench.core.adapter import (
-    MemoryAdapter,
-    CapabilityDescriptor,
-    CapabilityNotSupportedError,
     AdapterConfigError,
     AdapterHealthError,
-    RetrievalMode,
     BackingStore,
-    WriteResult,
+    CapabilityDescriptor,
+    CapabilityNotSupportedError,
+    MemoryAdapter,
     MemoryItem,
+    RetrievalMode,
     RetrievalResult,
+    WriteResult,
 )
 from voice_memory_bench.core.config import RunConfig
-from voice_memory_bench.core.schemas import MemScore, BenchmarkItem
+from voice_memory_bench.core.schemas import BenchmarkItem, MemScore
 
 __all__ = [
-    "MemoryAdapter",
-    "CapabilityDescriptor",
-    "CapabilityNotSupportedError",
     "AdapterConfigError",
     "AdapterHealthError",
-    "RetrievalMode",
     "BackingStore",
-    "WriteResult",
+    "BenchmarkItem",
+    "CapabilityDescriptor",
+    "CapabilityNotSupportedError",
+    "MemScore",
+    "MemoryAdapter",
     "MemoryItem",
+    "RetrievalMode",
     "RetrievalResult",
     "RunConfig",
-    "MemScore",
-    "BenchmarkItem",
+    "WriteResult",
 ]

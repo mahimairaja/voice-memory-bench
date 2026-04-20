@@ -1,11 +1,11 @@
 """Unit tests for RunConfig validation."""
+
 from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
 
 from voice_memory_bench.core.config import RunConfig
-
 
 MINIMAL_LLM = {
     "model": "gpt-4o",
@@ -35,7 +35,7 @@ def test_valid_locomo_config() -> None:
 @pytest.mark.unit
 def test_custom_dataset_requires_path() -> None:
     """Custom dataset without path should raise ValidationError."""
-    with pytest.raises(ValidationError, match="dataset.path is required"):
+    with pytest.raises(ValidationError, match=r"dataset\.path is required"):
         RunConfig(
             run_name="test",
             dataset={"name": "custom"},  # no path

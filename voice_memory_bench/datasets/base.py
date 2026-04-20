@@ -8,10 +8,10 @@ and registering it in :data:`DATASET_REGISTRY`.
 from __future__ import annotations
 
 import pathlib
-from typing import Iterator, Protocol, runtime_checkable
+from collections.abc import Iterator
+from typing import Protocol, runtime_checkable
 
 from voice_memory_bench.core.schemas import BenchmarkItem
-
 
 DATASET_CACHE_DIR = pathlib.Path.home() / ".cache" / "voice-memory-bench" / "datasets"
 

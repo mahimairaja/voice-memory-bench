@@ -9,21 +9,24 @@ they are referenced via env-var interpolation: ${MY_SECRET}.
 from __future__ import annotations
 
 from typing import Any
+
 from pydantic import BaseModel, Field, model_validator
 
 
 class ProviderConfig(BaseModel):
     """Provider-specific configuration block."""
+
     name: str = Field(..., description="Provider name: 'mem0', 'memori', 'graphiti', or 'cognee'.")
     config: dict[str, Any] = Field(
         default_factory=dict,
         description="Provider-specific key-value config. "
-                    "Secrets should be env-var references like ${POSTGRES_PASSWORD}.",
+        "Secrets should be env-var references like ${POSTGRES_PASSWORD}.",
     )
 
 
 class LLMConfig(BaseModel):
     """Configuration for an LLM used in the answer or judge stage."""
+
     model: str = Field(..., description="Model identifier, e.g. 'gpt-4o' or 'ollama/llama3'.")
     base_url: str | None = Field(None, description="Override base URL for self-hosted models.")
     api_key_env: str | None = Field(
@@ -37,6 +40,7 @@ class LLMConfig(BaseModel):
 
 class DatasetConfig(BaseModel):
     """Dataset selection."""
+
     name: str = Field(..., description="'locomo', 'longmemeval', or 'custom'.")
     subset: str | None = Field(None, description="Dataset subset or split, if applicable.")
     path: str | None = Field(
@@ -57,6 +61,7 @@ class RunConfig(BaseModel):
     -------
     See examples/configs/ for commented example files.
     """
+
     run_name: str = Field(..., description="Human-readable name for this run.")
     dataset: DatasetConfig
     provider: ProviderConfig
@@ -68,7 +73,7 @@ class RunConfig(BaseModel):
     dry_run: bool = Field(False, description="If True, print what would happen but do not execute.")
 
     @model_validator(mode="after")
-    def custom_dataset_needs_path(self) -> "RunConfig":
+    def custom_dataset_needs_path(self) -> RunConfig:
         if self.dataset.name == "custom" and self.dataset.path is None:
             raise ValueError("dataset.path is required when dataset.name='custom'")
         return self

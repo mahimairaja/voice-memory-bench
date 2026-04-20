@@ -34,12 +34,11 @@ NOT supported: KEYWORD.
 from __future__ import annotations
 
 from typing import Any
+
 import structlog
 
 from voice_memory_bench.core.adapter import (
     AdapterConfigError,
-    AdapterHealthError,
-    BackingStore,
     CapabilityDescriptor,
     CapabilityNotSupportedError,
     MemoryItem,
@@ -136,9 +135,13 @@ class GraphitiAdapter:
             raise CapabilityNotSupportedError(
                 provider="graphiti",
                 capability=mode,
-                reason=f"Graphiti supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}.",
+                reason=(
+                    f"Graphiti supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}."
+                ),
             )
-        raise NotImplementedError("TODO(mahimai): call graphiti.search() and wrap in RetrievalResult")
+        raise NotImplementedError(
+            "TODO(mahimai): call graphiti.search() and wrap in RetrievalResult"
+        )
 
     async def enumerate_memories(
         self,
@@ -146,7 +149,9 @@ class GraphitiAdapter:
         session_id: str | None = None,
     ) -> list[MemoryItem]:
         """List all graph nodes/edges for the user."""
-        raise NotImplementedError("TODO(mahimai): query FalkorDB for all nodes belonging to user_id")
+        raise NotImplementedError(
+            "TODO(mahimai): query FalkorDB for all nodes belonging to user_id"
+        )
 
     async def reset(self, user_id: str, session_id: str | None = None) -> None:
         """Delete all graph data for the user."""

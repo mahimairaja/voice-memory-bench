@@ -16,12 +16,11 @@ See providers/mem0/README.md and providers/mem0/docker-compose.yml for infra set
 from __future__ import annotations
 
 from typing import Any
+
 import structlog
 
 from voice_memory_bench.core.adapter import (
     AdapterConfigError,
-    AdapterHealthError,
-    BackingStore,
     CapabilityDescriptor,
     CapabilityNotSupportedError,
     MemoryItem,
@@ -79,7 +78,8 @@ class Mem0Adapter:
     async def health_check(self) -> None:
         """Ping the Postgres+pgvector instance."""
         raise NotImplementedError(
-            "TODO(mahimai): attempt a simple SELECT 1 against the postgres_url and raise AdapterHealthError on failure"
+            "TODO(mahimai): attempt SELECT 1 against postgres_url;"
+            " raise AdapterHealthError on failure"
         )
 
     async def add_message(
@@ -119,7 +119,9 @@ class Mem0Adapter:
                 capability=mode,
                 reason=f"Mem0 OSS supports SEMANTIC and HYBRID retrieval only; got {mode!r}.",
             )
-        raise NotImplementedError("TODO(mahimai): call mem0 client search() and wrap in RetrievalResult")
+        raise NotImplementedError(
+            "TODO(mahimai): call mem0 client search() and wrap in RetrievalResult"
+        )
 
     async def enumerate_memories(
         self,

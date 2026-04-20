@@ -28,12 +28,10 @@ from __future__ import annotations
 
 import pathlib
 from typing import Any
+
 import structlog
 
 from voice_memory_bench.core.adapter import (
-    AdapterConfigError,
-    AdapterHealthError,
-    BackingStore,
     CapabilityDescriptor,
     CapabilityNotSupportedError,
     MemoryItem,
@@ -71,9 +69,7 @@ class CogneeAdapter:
 
     async def _init_client(self) -> None:
         """Lazily initialise the Cognee client, creating data_dir if needed."""
-        raise NotImplementedError(
-            "TODO(mahimai): import cognee and initialise with self._data_dir"
-        )
+        raise NotImplementedError("TODO(mahimai): import cognee and initialise with self._data_dir")
 
     async def capabilities(self) -> CapabilityDescriptor:
         """Return Cognee's capability descriptor."""
@@ -84,7 +80,8 @@ class CogneeAdapter:
     async def health_check(self) -> None:
         """Verify the data directory is accessible and writable."""
         raise NotImplementedError(
-            "TODO(mahimai): check self._data_dir exists and is writable; raise AdapterHealthError if not"
+            "TODO(mahimai): check self._data_dir exists and is writable;"
+            " raise AdapterHealthError if not"
         )
 
     async def add_message(
@@ -122,7 +119,9 @@ class CogneeAdapter:
             raise CapabilityNotSupportedError(
                 provider="cognee",
                 capability=mode,
-                reason=f"Cognee supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}.",
+                reason=(
+                    f"Cognee supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}."
+                ),
             )
         raise NotImplementedError("TODO(mahimai): call cognee.search() and wrap in RetrievalResult")
 
@@ -136,4 +135,6 @@ class CogneeAdapter:
 
     async def reset(self, user_id: str, session_id: str | None = None) -> None:
         """Delete all memory for the user."""
-        raise NotImplementedError("TODO(mahimai): call cognee.prune() or delete user data directory")
+        raise NotImplementedError(
+            "TODO(mahimai): call cognee.prune() or delete user data directory"
+        )

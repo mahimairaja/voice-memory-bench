@@ -1,4 +1,5 @@
 """Unit tests for MemScore and related schemas."""
+
 from __future__ import annotations
 
 import pytest

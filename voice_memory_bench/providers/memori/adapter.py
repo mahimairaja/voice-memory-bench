@@ -22,12 +22,11 @@ NOT supported: TEMPORAL, GRAPH.
 from __future__ import annotations
 
 from typing import Any
+
 import structlog
 
 from voice_memory_bench.core.adapter import (
     AdapterConfigError,
-    AdapterHealthError,
-    BackingStore,
     CapabilityDescriptor,
     CapabilityNotSupportedError,
     MemoryItem,
@@ -82,7 +81,8 @@ class MemoriAdapter:
     async def health_check(self) -> None:
         """Ping the Postgres instance."""
         raise NotImplementedError(
-            "TODO(mahimai): attempt a simple SELECT 1 against the postgres_url and raise AdapterHealthError on failure"
+            "TODO(mahimai): attempt SELECT 1 against postgres_url;"
+            " raise AdapterHealthError on failure"
         )
 
     async def add_message(
@@ -120,7 +120,9 @@ class MemoriAdapter:
             raise CapabilityNotSupportedError(
                 provider="memori",
                 capability=mode,
-                reason=f"Memori supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}.",
+                reason=(
+                    f"Memori supports {sorted(m.value for m in _SUPPORTED_MODES)}; got {mode!r}."
+                ),
             )
         raise NotImplementedError("TODO(mahimai): call Memori search() and wrap in RetrievalResult")
 

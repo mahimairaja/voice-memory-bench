@@ -1,5 +1,7 @@
 """CLI subcommands for dataset management."""
+
 from __future__ import annotations
+
 import typer
 
 app = typer.Typer(help="Download and inspect benchmark datasets.", no_args_is_help=True)
@@ -12,7 +14,9 @@ def download_dataset(
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Download a benchmark dataset and verify its hash."""
-    raise NotImplementedError("TODO(mahimai): look up loader in DATASET_REGISTRY and call download()")
+    raise NotImplementedError(
+        "TODO(mahimai): look up loader in DATASET_REGISTRY and call download()"
+    )
 
 
 @app.command("info")

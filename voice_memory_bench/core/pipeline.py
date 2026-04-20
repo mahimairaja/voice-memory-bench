@@ -14,15 +14,17 @@ This module defines only the contracts and shared types.
 
 from __future__ import annotations
 
+import datetime
 import enum
 import pathlib
 from typing import Any, Protocol
+
 from pydantic import BaseModel, Field
-import datetime
 
 
 class StageStatus(str, enum.Enum):
     """Execution status of a pipeline stage."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETE = "complete"
@@ -32,12 +34,15 @@ class StageStatus(str, enum.Enum):
 
 class StageResult(BaseModel):
     """Written to disk at the end of each stage."""
+
     stage: str
     run_id: str
     status: StageStatus
     started_at: datetime.datetime
     finished_at: datetime.datetime | None = None
-    artifact_dir: str = Field(..., description="Path to the directory where artifacts were written.")
+    artifact_dir: str = Field(
+        ..., description="Path to the directory where artifacts were written."
+    )
     items_processed: int = 0
     items_skipped: int = 0
     items_failed: int = 0

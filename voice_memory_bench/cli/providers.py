@@ -1,5 +1,7 @@
 """CLI subcommands for managing providers."""
+
 from __future__ import annotations
+
 import typer
 
 app = typer.Typer(help="Manage and inspect memory providers.", no_args_is_help=True)
@@ -20,4 +22,6 @@ def check_provider(
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Run a health check against a configured provider."""
-    raise NotImplementedError("TODO(mahimai): load config, instantiate adapter, call health_check()")
+    raise NotImplementedError(
+        "TODO(mahimai): load config, instantiate adapter, call health_check()"
+    )

@@ -27,8 +27,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Provider extras: install only the providers you need.
+# Each extra pulls in the provider's SDK.
+# NOTE: some packages may not yet be published to PyPI under these names;
+#       see the provider's README.md for manual installation instructions.
 mem0 = ["mem0ai>=0.1"]
-memori = ["gibson-memory>=0.1"]
+# TODO(mahimai): replace with the published PyPI package name once Memori SDK is released.
+# memori = ["gibson-memory>=0.1"]
 graphiti = ["graphiti-core>=0.3", "falkordb>=1.0"]
 cognee = ["cognee>=0.1"]
 dev = [
@@ -49,7 +54,12 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A", "C4", "RUF"]
-ignore = ["ANN101", "ANN102"]
+# B008: Typer's API requires function calls (typer.Option/Argument) in default arguments.
+# UP042: StrEnum is Python 3.11+ only and reduces cross-version flexibility in a scaffold.
+ignore = ["B008", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # assert is idiomatic in pytest
 
 [tool.mypy]
 python_version = "3.11"

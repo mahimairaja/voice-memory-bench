@@ -1,13 +1,14 @@
 """Unit tests for adapter protocol and error types."""
+
 from __future__ import annotations
 
 import pytest
 
 from voice_memory_bench.core.adapter import (
-    CapabilityNotSupportedError,
-    RetrievalMode,
     AdapterConfigError,
     AdapterHealthError,
+    CapabilityNotSupportedError,
+    RetrievalMode,
 )
 
 

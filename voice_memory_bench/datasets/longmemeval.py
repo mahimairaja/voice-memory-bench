@@ -19,14 +19,15 @@ https://huggingface.co/datasets/xiaowu0162/longmemeval
 from __future__ import annotations
 
 import pathlib
-from typing import Iterator
+from collections.abc import Iterator
 
 from voice_memory_bench.core.schemas import BenchmarkItem
 from voice_memory_bench.datasets.base import DATASET_CACHE_DIR
 
-
 LONGMEMEVAL_EXPECTED_SHA256 = "TODO(mahimai): fill in after verifying the canonical download"
-LONGMEMEVAL_URL = "https://huggingface.co/datasets/xiaowu0162/longmemeval/resolve/main/longmemeval_s.json"
+LONGMEMEVAL_URL = (
+    "https://huggingface.co/datasets/xiaowu0162/longmemeval/resolve/main/longmemeval_s.json"
+)
 
 
 class LongMemEvalLoader:

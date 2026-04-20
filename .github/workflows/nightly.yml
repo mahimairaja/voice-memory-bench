@@ -1,0 +1,46 @@
+name: Nightly Smoke Benchmark
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # 2 AM UTC nightly
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Start Mem0 stack
+        run: docker compose -f providers/mem0/docker-compose.yml up -d
+
+      - name: Wait for Postgres to be ready
+        run: |
+          for i in $(seq 1 30); do
+            docker exec vmb-mem0-postgres pg_isready -U mem0 && break
+            echo "Waiting for Postgres ($i/30)..."
+            sleep 2
+          done
+
+      - name: Run smoke benchmark (dry-run until Mem0 adapter is implemented)
+        run: uv run vmb run examples/configs/mem0-locomo.yaml --dry-run
+        # TODO(mahimai): remove --dry-run once the Mem0 adapter is implemented
+        env:
+          POSTGRES_PASSWORD: changeme
+
+      - name: Upload run artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-report-${{ github.run_id }}
+          path: runs/
+          if-no-files-found: ignore

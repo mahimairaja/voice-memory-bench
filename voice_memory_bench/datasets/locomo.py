@@ -18,11 +18,10 @@ https://huggingface.co/datasets/snap-research/locomo
 from __future__ import annotations
 
 import pathlib
-from typing import Iterator
+from collections.abc import Iterator
 
 from voice_memory_bench.core.schemas import BenchmarkItem
 from voice_memory_bench.datasets.base import DATASET_CACHE_DIR
-
 
 LOCOMO_EXPECTED_SHA256 = "TODO(mahimai): fill in after verifying the canonical download"
 LOCOMO_URL = "https://huggingface.co/datasets/snap-research/locomo/resolve/main/locomo10_test.json"

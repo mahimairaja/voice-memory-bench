@@ -1,6 +1,9 @@
 """JSON report generator."""
+
 from __future__ import annotations
+
 import pathlib
+
 from voice_memory_bench.core.schemas import EvaluationArtifact
 
 

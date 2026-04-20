@@ -11,14 +11,16 @@ See CONTRIBUTING.md for the versioning policy.
 
 from __future__ import annotations
 
+import datetime
 import enum
 from typing import Any, Protocol, runtime_checkable
+
 from pydantic import BaseModel, Field
-import datetime
 
 
 class RetrievalMode(str, enum.Enum):
     """Retrieval modes that a provider may or may not support."""
+
     SEMANTIC = "semantic"
     KEYWORD = "keyword"
     TEMPORAL = "temporal"
@@ -28,6 +30,7 @@ class RetrievalMode(str, enum.Enum):
 
 class BackingStore(str, enum.Enum):
     """Backing store type reported by the adapter."""
+
     POSTGRES = "postgres"
     SQLITE = "sqlite"
     VECTOR_DB = "vector_db"
@@ -42,6 +45,7 @@ class CapabilityDescriptor(BaseModel):
 
     Returned by :meth:`MemoryAdapter.capabilities` at startup.
     """
+
     provider_name: str = Field(..., description="Human-readable provider name.")
     provider_version: str = Field(..., description="Version of the provider SDK/library in use.")
     supported_retrieval_modes: list[RetrievalMode] = Field(
@@ -60,7 +64,7 @@ class CapabilityDescriptor(BaseModel):
     declared_cost_model: str | None = Field(
         None,
         description="Free-text description of the provider's cost model (tokens, API calls, etc.). "
-                    "None if self-hosted with no metered cost.",
+        "None if self-hosted with no metered cost.",
     )
     extra: dict[str, Any] = Field(
         default_factory=dict,
@@ -70,24 +74,33 @@ class CapabilityDescriptor(BaseModel):
 
 class WriteResult(BaseModel):
     """Result of a write operation."""
+
     provider_id: str | None = Field(None, description="Provider-assigned ID for the written item.")
     latency_ms: float = Field(..., description="Wall-clock write latency in milliseconds.")
-    tokens_written: int | None = Field(None, description="Token count of the written content, if known.")
+    tokens_written: int | None = Field(
+        None, description="Token count of the written content, if known."
+    )
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
 class MemoryItem(BaseModel):
     """A single memory item as returned by a retrieval operation."""
+
     item_id: str = Field(..., description="Provider-assigned or synthesized item identifier.")
     content: str = Field(..., description="The memory text as it would be injected into a prompt.")
-    score: float | None = Field(None, description="Retrieval relevance score (higher = more relevant).")
+    score: float | None = Field(
+        None, description="Retrieval relevance score (higher = more relevant)."
+    )
     created_at: datetime.datetime | None = Field(None)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class RetrievalResult(BaseModel):
     """Result of a retrieval operation."""
-    items: list[MemoryItem] = Field(..., description="Retrieved memory items, ordered by relevance.")
+
+    items: list[MemoryItem] = Field(
+        ..., description="Retrieved memory items, ordered by relevance."
+    )
     latency_ms: float = Field(..., description="Wall-clock retrieval latency in milliseconds.")
     retrieval_mode: RetrievalMode = Field(..., description="The retrieval mode that was used.")
     token_footprint: int | None = Field(

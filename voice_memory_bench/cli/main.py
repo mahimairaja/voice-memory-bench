@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import typer
 
+from voice_memory_bench.cli import compare as compare_cmd
 from voice_memory_bench.cli import datasets as datasets_cmd
 from voice_memory_bench.cli import providers as providers_cmd
 from voice_memory_bench.cli import run as run_cmd
-from voice_memory_bench.cli import compare as compare_cmd
 
 app = typer.Typer(
     name="vmb",
