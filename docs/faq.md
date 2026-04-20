@@ -1,31 +1,44 @@
 # FAQ
 
-**Q: Why Python and not TypeScript?**  
-Every self-hostable memory framework targeted here (Mem0, Memori, Graphiti, Cognee) ships a Python SDK as its canonical integration surface. The voice agent runtime (LiveKit Agents) is Python-first. TypeScript would require shelling out or wrapping RPC.
+**Q: Why Go for the engine and Python only for the sidecar?**
+The engine ships as a single static binary, which is agent-friendly to
+distribute. Go's scheduler has sub-ms GC pauses, which keeps the reported
+p99 honest; the GIL would leak interpreter jitter into the measurement.
+Provider SDKs are Python-first, so the sidecar uses them directly instead of
+being reimplemented. The HTTP boundary mirrors what cloud variants of these
+providers expose, so a config flip can later point the engine at a cloud API
+without engine changes.
 
-**Q: Why not include OpenAI Memory, ChatGPT Memory, etc.?**  
-Scope is self-hostable only. Any provider that cannot be run on your own hardware under an open-source license is out of scope by design.
+**Q: Why is latency measured in Go rather than in the sidecar?**
+So the number is authoritative. The sidecar does self-report a latency for
+debugging, but the voice verdict uses the Go-side wall clock around each
+HTTP call. That is what a voice agent would feel.
 
-**Q: What is MemScore?**  
-MemScore is a triple: (quality, latency, cost). It is never collapsed to a single scalar. The philosophy is borrowed from the [MemoryBench](https://github.com/supermemoryai/memorybench) project.
+**Q: Why only Mem0 in the MVP?**
+To push an end-to-end headline verdict out the door. Memori, Graphiti, and
+Cognee all sit behind the same HTTP contract — adding them is a v0.2 task.
 
-**Q: Is this production-ready?**  
-No. Phase 1 (text-chat benchmark) is scaffolded but not implemented. Phase 2 (voice benchmark) is sketched. See ROADMAP.md.
+**Q: Why no cloud providers?**
+Self-hosted only in v0.1. Cloud-managed endpoints land in v0.4 via the same
+HTTP contract.
 
-**Q: Why FalkorDB instead of Neo4j for Graphiti?**  
-FalkorDB runs as a single Docker container (no JVM), speaks the Redis wire protocol, and is Apache-2.0 licensed. For per-user memory graphs (< 1M nodes), it has lower query latency than Neo4j.
+**Q: What counts as ACCEPTABLE vs FAIL?**
+Voice verdict is driven by search-stage p95: `<300 ms` EXCELLENT,
+`300–500 ms` ACCEPTABLE, `>500 ms` FAIL.
 
-**Q: Can I add my own dataset?**  
-Yes. Provide a JSONL file where each line matches the `BenchmarkItem` schema and set `dataset.name: custom` with `dataset.path` in your run config.
+**Q: How is this different from MemoryBench (Supermemory)?**
+MemoryBench is a TypeScript harness that inspired the MemScore framing and
+the five-stage pipeline shape. vbench inherits both, then narrows the focus
+to self-hostable providers and voice-agent fitness metrics, and rebuilds the
+engine in Go so measurements are clean.
 
-**Q: How do I report a security vulnerability?**  
-See SECURITY.md.
+**Q: What LLMs are supported for answer/judge stages?**
+Anything that speaks the OpenAI chat-completions API. Set `base_url` in the
+LLM config to point at a self-hosted endpoint (vLLM, Ollama, etc.).
 
-**Q: How is this different from MemoryBench by Supermemory?**  
-MemoryBench is TypeScript, targets cloud providers, and measures answer quality. voice-memory-bench is Python, targets self-hostable providers, and measures quality + latency + cost with explicit voice-agent concerns.
+**Q: How do I resume a crashed run?**
+`./vbench eval --config … --run-id <id>`. Each stage writes a `.complete`
+sentinel and the next run skips anything already marked complete.
 
-**Q: What LLMs are supported for answer/judge stages?**  
-Any model accessible via an OpenAI-compatible API. Set `base_url` in the LLM config to point at a self-hosted model (e.g. Ollama, vLLM).
-
-**Q: Can I run only specific pipeline stages?**  
-Yes: `uv run vmb run config.yaml --stages index,search,answer`
+**Q: Security?**
+See `SECURITY.md`.
