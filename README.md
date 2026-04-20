@@ -1,56 +1,108 @@
-# voice-memory-bench
+# vbench
 
-> *LongMemEval tells you which memory framework is smartest. This benchmark tells you which one your voice agent can actually afford.*
+> *LongMemEval tells you which memory framework is smartest. vbench tells you which one your voice agent can actually ship.*
 
-## Why this exists
+`vbench` is a Go + Python benchmark harness that measures whether a self-hostable
+memory framework (Mem0 today; Memori / Graphiti / Cognee on the roadmap) is
+**voice-agent fit** — not just whether it answers the question right.
 
-Existing memory benchmarks (LoCoMo, LongMemEval, ConvoMem) measure answer quality on text chat transcripts. They do not measure what matters for real-time voice agents: p50/p95/p99 retrieval latency under concurrent load, token footprint of injected memory, write-path latency during mid-call persistence, cold vs warm recall for returning callers, concurrent session isolation, or turn-level relevance over voice-shaped discourse — short turns, disfluencies, interruptions, topic drift.
+The headline output is one line per concurrency level, so a non-technical user
+or an agent downstream can act on it without parsing tables:
 
-`voice-memory-bench` is a Python harness that measures all of the above across self-hostable, open-source memory frameworks. It is MIT-licensed, fully reproducible, and produces MemScore triples (quality, latency, cost) rather than a single scalar.
+```
+mem0 @ 1x: EXCELLENT  (p95 = 210 ms, quality = 0.74, tokens = 390)
+mem0 @ 4x: ACCEPTABLE (p95 = 380 ms, quality = 0.72, tokens = 420)
+```
 
-## Supported Providers
+## Voice verdicts
 
-| Provider | Backend | Self-host | Status |
-|----------|---------|-----------|--------|
-| [Mem0 OSS](https://github.com/mem0ai/mem0) | pgvector + Postgres | ✅ | Scaffolded |
-| [Memori (GibsonAI)](https://github.com/Gibson-AI/memori) | SQL + Postgres | ✅ | Scaffolded |
-| [Graphiti](https://github.com/getzep/graphiti) | FalkorDB (knowledge graph) | ✅ | Scaffolded |
-| [Cognee](https://github.com/topoteretes/cognee) | SQLite + LanceDB + Kuzu | ✅ | Scaffolded |
+The verdict is driven by search-stage p95 latency, which is what a voice agent
+feels on the read path:
 
-**Self-hostable only.** Any provider that cannot be run on your own hardware under an open-source license is out of scope.
+| p95 latency       | Verdict     |
+|-------------------|-------------|
+| &lt; 300 ms       | EXCELLENT   |
+| 300 – 500 ms      | ACCEPTABLE  |
+| &gt; 500 ms       | FAIL        |
+
+Quality (judge LLM score on LoCoMo QA) and injected-memory token footprint are
+reported alongside the verdict — never collapsed into a single scalar.
+
+## Architecture
+
+- **Engine: Go** — single static binary, no GIL jitter polluting p99 numbers,
+  first-class Cobra CLI, trivial distribution for agents.
+- **Providers: Python sidecars** over HTTP — every target provider (Mem0 today)
+  ships a Python SDK as its canonical integration surface. The HTTP boundary
+  mirrors the cloud API shape, so pointing at a cloud endpoint later is a
+  config flip, not a rewrite.
+- **Latency is authoritative in the Go engine.** The sidecar self-reports a
+  latency for reference, but the voice verdict uses the Go-side wall clock.
+
+More detail: [`docs/architecture.md`](docs/architecture.md).
+
+## MVP scope
+
+| Axis         | In scope                              | Deferred to v0.2                     |
+|--------------|---------------------------------------|--------------------------------------|
+| Providers    | Mem0 OSS                              | Memori, Graphiti, Cognee             |
+| Datasets     | LoCoMo                                | LongMemEval, custom JSONL            |
+| Concurrency  | 1x, 4x                                | 16x                                  |
+| Hosting      | Self-hosted                           | Cloud-managed (config flip)          |
 
 ## Quickstart
 
 ```bash
-# 1. Install
-pip install uv
-uv sync
+# 1. Start the backing store for Mem0.
+export POSTGRES_PASSWORD=changeme
+make providers-up-mem0
 
-# 2. Download a dataset
-uv run vmb datasets download locomo
+# 2. Sync the Mem0 sidecar environment.
+make sidecar-sync
 
-# 3. Run a benchmark
-uv run vmb run examples/configs/mem0-locomo.yaml
+# 3. Build the engine.
+make build
+
+# 4. Download LoCoMo.
+./vbench datasets download locomo
+
+# 5. Run a smoke test.
+export OPENAI_API_KEY=sk-...
+./vbench eval --config examples/configs/mem0-locomo.yaml --max-items 2
 ```
 
-## Architecture
+## Layout
 
-See [docs/architecture.md](docs/architecture.md) for the full pipeline, adapter interface, and artifact schema.
-
-## Credits
-
-This project is a sibling to [MemoryBench](https://github.com/supermemoryai/memorybench) by the [Supermemory](https://supermemory.ai) team. MemoryBench is a TypeScript benchmarking harness with the same pipeline shape (`ingest → index → search → answer → evaluate`) and the same MemScore philosophy. `voice-memory-bench` reimplements that design in Python for three concrete reasons:
-
-1. Every self-hostable memory framework targeted here (Mem0, Memori, Graphiti, Cognee) ships a Python SDK as its canonical integration surface. A Python harness talks to providers directly; a TypeScript harness has to shell out or wrap RPC.
-2. The voice agent runtime this harness simulates ([LiveKit Agents](https://github.com/livekit/agents)) is Python-first.
-3. Mahimai's production stack (FastAPI, NeonDB, Hetzner, Fly.io workers) is Python-native, so this harness doubles as a deployment template.
-
-Thank you to the Supermemory team for publishing MemoryBench openly and for the MemScore framing.
+```
+cmd/vbench/         # Cobra CLI (root, eval, datasets, providers)
+internal/
+  schema/           # Benchmark, artifacts, MemScore, RunConfig
+  adapter/          # HTTP client to the sidecar + error envelope
+  sidecar/          # Subprocess lifecycle + Mem0 defaults
+  dataset/          # Loader interface + LoCoMo
+  llm/              # OpenAI chat-completion answer + judge client
+  concurrency/      # Worker pool + percentile helper
+  engine/           # Pipeline + 5 stages (ingest → index → search → answer → evaluate)
+  report/           # Voice verdict + JSON report
+sidecars/mem0/      # Python FastAPI sidecar (vbench-mem0 entrypoint)
+providers/mem0/     # Docker compose for Postgres/pgvector + provider README
+examples/configs/   # Example run configs
+docs/               # Architecture + benchmarks + providers + voice-bench notes
+```
 
 ## Status
 
-Phase 1 (text-chat benchmark) is scaffolded. Phase 2 (voice benchmark) is scaffolded but not implemented. See [ROADMAP.md](ROADMAP.md).
+MVP: end-to-end pipeline against Mem0 + LoCoMo at 1x and 4x. See
+[`ROADMAP.md`](ROADMAP.md) and [`TODO.md`](TODO.md) for what's planned next.
 
-[![CI](https://github.com/mahimairaja/voice-memory-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/mahimairaja/voice-memory-bench/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+## Credits
+
+vbench inherits the MemScore framing (quality / latency / cost, never
+collapsed) and the five-stage pipeline shape (ingest → index → search → answer
+→ evaluate) from [MemoryBench](https://github.com/supermemoryai/memorybench).
+The voice-fitness emphasis and the Go + Python sidecar split are specific to
+vbench.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

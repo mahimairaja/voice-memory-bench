@@ -1,17 +1,16 @@
-# Minimal self-hosted stack for the Mem0 adapter.
-# Provides: PostgreSQL 16 with pgvector extension.
+# Self-hosted Postgres + pgvector for the Mem0 sidecar.
 #
 # Usage:
-#   docker compose -f providers/mem0/docker-compose.yml up -d
+#   make providers-up-mem0
+#   # or: docker compose -f providers/mem0/docker-compose.yml up -d
 #
-# The POSTGRES_PASSWORD should be set in your environment or .env file.
-
-version: "3.9"
+# Env:
+#   POSTGRES_PASSWORD (required) — set in your shell or .env before running.
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: vmb-mem0-postgres
+    container_name: vbench-mem0-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: mem0
@@ -20,7 +19,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - mem0_pgdata:/var/lib/postgresql/data
+      - vbench_mem0_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mem0"]
       interval: 10s
@@ -28,4 +27,4 @@ services:
       retries: 5
 
 volumes:
-  mem0_pgdata:
+  vbench_mem0_pgdata:

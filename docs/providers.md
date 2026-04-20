@@ -1,88 +1,46 @@
-# Provider Guide
+# Providers
 
-## Mem0 OSS
+## Mem0 OSS (MVP)
 
-**Backing store:** PostgreSQL 16 + pgvector
+Backing store: Postgres 16 + pgvector.
 
-Mem0 is the reference baseline. It extracts facts from conversation turns using an LLM, stores them as vector embeddings in pgvector, and retrieves by semantic similarity.
+Sidecar: [`sidecars/mem0`](../sidecars/mem0).
+Backing infra: [`providers/mem0/docker-compose.yml`](../providers/mem0/docker-compose.yml).
 
-### Setup
+### Supported retrieval modes
+
+| Mode     | Supported |
+|----------|-----------|
+| semantic | yes       |
+| hybrid   | yes       |
+| keyword  | no        |
+| temporal | no        |
+| graph    | no        |
+
+Unsupported modes return `422 capability_not_supported` from the sidecar, which
+the engine surfaces as a SKIPPED entry in the report.
+
+### Run it
 
 ```bash
-docker compose -f providers/mem0/docker-compose.yml up -d
 export POSTGRES_PASSWORD=changeme
 export OPENAI_API_KEY=sk-...
+make providers-up-mem0
+make sidecar-sync
+make build
+./vbench datasets download locomo
+./vbench eval --config examples/configs/mem0-locomo.yaml --max-items 2
 ```
-
-### Supported retrieval modes
-- `SEMANTIC` ✅
-- `HYBRID` ✅
-- `KEYWORD` ❌
-- `TEMPORAL` ❌
-- `GRAPH` ❌
 
 ---
 
-## Memori (GibsonAI)
+## Roadmap providers (v0.2+)
 
-**Backing store:** PostgreSQL 16 (no pgvector)
+Each of these will land as a standalone sidecar package + docker-compose file,
+wired through the same HTTP contract:
 
-Memori stores memories in a plain SQL schema with tsvector-based full-text search. No embedding step on the write path makes it the fastest for p99 latency.
+- **Memori** (SQL + tsvector, no embedding on the write path) — strong p99 candidate.
+- **Graphiti** (FalkorDB-backed temporal graph) — good for multi-hop / time queries.
+- **Cognee** (SQLite + LanceDB + Kuzu, fully local) — air-gapped / data-residency option.
 
-### Setup
-
-```bash
-docker compose -f providers/memori/docker-compose.yml up -d
-export POSTGRES_PASSWORD=changeme
-```
-
-### Supported retrieval modes
-- `SEMANTIC` ✅ (tsvector/tsquery)
-- `KEYWORD` ✅
-- `HYBRID` ✅ (RRF)
-- `TEMPORAL` ❌
-- `GRAPH` ❌
-
----
-
-## Graphiti
-
-**Backing store:** FalkorDB (knowledge graph)
-
-Graphiti models memories as a temporal property graph. It excels at multi-hop queries and time-aware retrieval ("what did the user say last week about X?").
-
-### Setup
-
-```bash
-docker compose -f providers/graphiti/docker-compose.yml up -d
-export OPENAI_API_KEY=sk-...
-```
-
-### Supported retrieval modes
-- `GRAPH` ✅
-- `TEMPORAL` ✅
-- `SEMANTIC` ✅
-- `KEYWORD` ❌
-- `HYBRID` ❌
-
----
-
-## Cognee
-
-**Backing store:** SQLite + LanceDB + Kuzu (all local)
-
-Cognee is the local-first option. No network dependencies for storage — everything runs on the local filesystem. Ideal for air-gapped or data-residency-constrained deployments.
-
-### Setup
-
-```bash
-# No docker needed — Cognee runs entirely locally
-export OPENAI_API_KEY=sk-...  # Only needed for extraction LLM
-```
-
-### Supported retrieval modes
-- `SEMANTIC` ✅ (LanceDB)
-- `GRAPH` ✅ (Kuzu)
-- `KEYWORD` ❌
-- `TEMPORAL` ❌
-- `HYBRID` ❌
+None of these are in the MVP. Do not wire them up yet.

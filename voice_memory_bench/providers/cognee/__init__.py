@@ -1,1 +1,0 @@
-"""Cognee provider adapter."""

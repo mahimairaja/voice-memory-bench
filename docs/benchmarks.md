@@ -1,57 +1,32 @@
 # Benchmark Datasets
 
-## LoCoMo
+## LoCoMo (MVP)
 
-**Full name:** Long-Horizon Conversational Memory  
-**Citation:** Maharana et al., ACL 2024. https://arxiv.org/abs/2402.17753  
-**Source:** https://huggingface.co/datasets/snap-research/locomo
+- Full name: Long-Horizon Conversational Memory
+- Citation: Maharana et al., ACL 2024 — https://arxiv.org/abs/2402.17753
+- Source: https://huggingface.co/datasets/snap-research/locomo
 
-LoCoMo contains multi-session conversations between two speakers spanning months. Each conversation includes QA pairs that require recalling facts from earlier sessions.
+LoCoMo contains multi-session conversations between two speakers spanning
+months, each with QA pairs that require recalling facts from earlier sessions.
 
-**Why it's useful for voice agents:** Real conversations span multiple calls. LoCoMo tests whether a memory system can recall facts from a call that happened weeks ago.
-
-**Download:**
 ```bash
-uv run vmb datasets download locomo
+./vbench datasets download locomo
+./vbench datasets info locomo
 ```
 
----
+vbench loads LoCoMo by flattening its session buckets into a single turn list
+while preserving `session_id` on each turn. Search at test time is scoped to
+the last session, which matches the voice-agent scenario: a returning caller
+asking about something from earlier in *their* history.
 
-## LongMemEval
+## Roadmap datasets (v0.2+)
 
-**Full name:** LongMemEval  
-**Citation:** Wu et al., ICLR 2025. https://arxiv.org/abs/2410.10813  
-**Source:** https://huggingface.co/datasets/xiaowu0162/longmemeval
+- **LongMemEval** (Wu et al., ICLR 2025 — https://arxiv.org/abs/2410.10813).
+  Exercises temporal reasoning, knowledge updates, and the abstention case
+  (safety-critical for voice agents).
+- **Custom JSONL**. Supply benchmark data that matches `internal/schema.BenchmarkItem`:
+  ```jsonl
+  {"item_id": "...", "dataset": "custom", "conversation": [...], "questions": [...]}
+  ```
 
-LongMemEval tests five memory abilities:
-1. Single-session preference recall
-2. Cross-session preference tracking
-3. Temporal reasoning over memory timelines
-4. Knowledge updates when facts change
-5. Abstention when memory is absent
-
-**Why it's useful for voice agents:** LongMemEval's abstention category tests the critical case where a provider confidently retrieves wrong memories — a safety issue in voice agents.
-
-**Download:**
-```bash
-uv run vmb datasets download longmemeval
-```
-
----
-
-## Custom JSONL
-
-Supply your own benchmark data in the `BenchmarkItem` schema:
-
-```jsonl
-{"item_id": "item-001", "dataset": "custom", "conversation": [...], "questions": [...]}
-```
-
-See `voice_memory_bench/core/schemas.py` for the full schema definition.
-
-**Usage:**
-```yaml
-dataset:
-  name: custom
-  path: /path/to/my_bench.jsonl
-```
+Neither is wired up in the MVP.

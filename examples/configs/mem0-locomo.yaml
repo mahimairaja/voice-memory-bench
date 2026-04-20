@@ -1,38 +1,52 @@
-# Mem0 + LoCoMo benchmark run.
+# Mem0 + LoCoMo voice-fitness benchmark.
 #
-# Prerequisites:
-#   1. Start Postgres: docker compose -f providers/mem0/docker-compose.yml up -d
-#   2. Set env: export POSTGRES_PASSWORD=changeme OPENAI_API_KEY=sk-...
-#   3. Download dataset: uv run vmb datasets download locomo
-#   4. Run: uv run vmb run examples/configs/mem0-locomo.yaml
+# Prereqs:
+#   export POSTGRES_PASSWORD=changeme
+#   export OPENAI_API_KEY=sk-...
+#   make providers-up-mem0
+#   make sidecar-sync
+#   make build
+#   ./vbench datasets download locomo
+#
+# Then:
+#   ./vbench eval --config examples/configs/mem0-locomo.yaml --max-items 2
 
-run_name: mem0-locomo
+run_name: mem0-locomo-voice-fitness
 
 dataset:
   name: locomo
-  # max_items: 50  # Uncomment for a quick smoke test
+  # Uncomment to cap items from config; CLI --max-items overrides this.
+  # max_items: 10
 
 provider:
   name: mem0
+  # Optional override. Default is `uv run vbench-mem0` in sidecars/mem0.
+  # command: ["uv", "run", "vbench-mem0"]
   config:
     postgres_url: postgresql://mem0:${POSTGRES_PASSWORD}@localhost:5432/mem0
     llm_provider: openai
     llm_model: gpt-4o-mini
+    collection_name: vbench_locomo
+    # embedding_model: text-embedding-3-small
 
 answer_llm:
-  model: gpt-4o
-  api_key_env: OPENAI_API_KEY
-  temperature: 0.0
-  max_tokens: 512
-  seed: 42
-
-judge_llm:
-  model: gpt-4o
+  model: gpt-4o-mini
   api_key_env: OPENAI_API_KEY
   temperature: 0.0
   max_tokens: 256
   seed: 42
 
-concurrency: 1
+judge_llm:
+  model: gpt-4o-mini
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  max_tokens: 128
+  seed: 42
+
+# MVP: measure at single and 4x concurrent load.
+concurrency:
+  - 1
+  - 4
+
 seed: 42
 output_dir: runs

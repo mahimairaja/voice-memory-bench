@@ -1,34 +1,31 @@
-# Contributing to voice-memory-bench
+# Contributing to vbench
 
-Thank you for your interest in contributing!
-
-## Quick Start
+## Quick start
 
 ```bash
-git clone https://github.com/mahimairaja/voice-memory-bench
-cd voice-memory-bench
-pip install uv
-uv sync --extra dev
-pre-commit install
+git clone https://github.com/mahimairaja/vbench
+cd vbench
+make build
+make test
 ```
 
-## Development Workflow
+## Development loop
 
-1. Fork the repository and create a feature branch
-2. Make your changes
-3. Run tests: `uv run pytest -m unit`
-4. Run linter: `uv run ruff check .`
-5. Run type checker: `uv run mypy voice_memory_bench/`
-6. Submit a pull request
+1. Fork and create a feature branch.
+2. Engine changes: `go build ./... && go vet ./... && go test ./...`.
+3. Sidecar changes: `make sidecar-sync && make sidecar-lint`.
+4. Update docs / example configs if the contract moves.
+5. Submit a PR.
 
-## Implementing a Provider Adapter
+## Adding a provider
 
-The most valuable contribution is a fully-implemented provider adapter. See `docs/contributing.md` for the full guide.
+See [`docs/contributing.md`](docs/contributing.md). The MVP wires only Mem0;
+Memori / Graphiti / Cognee land in v0.2 through the same sidecar shape.
 
-## Reporting Issues
+## Reporting issues
 
-Please use the GitHub issue tracker. For security vulnerabilities, see SECURITY.md.
+Use the GitHub issue tracker. Security vulnerabilities: see `SECURITY.md`.
 
-## Code of Conduct
+## Code of conduct
 
-This project follows the Contributor Covenant. See CODE_OF_CONDUCT.md.
+Contributor Covenant — see `CODE_OF_CONDUCT.md`.

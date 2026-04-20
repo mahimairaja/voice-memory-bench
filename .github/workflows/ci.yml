@@ -11,56 +11,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint & Type Check
+  go:
+    name: Go build / vet / test
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-go@v5
         with:
-          python-version: "3.11"
+          go-version: "1.24"
+          cache: true
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync --extra dev
-
-      - name: Ruff lint
-        run: uv run ruff check voice_memory_bench/ tests/
-
-      - name: Ruff format check
-        run: uv run ruff format --check voice_memory_bench/ tests/
-
-      - name: Mypy
-        run: uv run mypy voice_memory_bench/
-
-  test:
-    name: Unit Tests
+  sidecar-mem0:
+    name: Mem0 sidecar (syntax + lint)
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v3
         with:
           version: "latest"
-
-      - name: Install dependencies
-        run: uv sync --extra dev
-
-      - name: Run unit tests
-        run: uv run pytest -m unit --tb=short -q
+      - name: uv sync sidecar
+        working-directory: sidecars/mem0
+        run: uv sync
+      - name: Ruff
+        working-directory: sidecars/mem0
+        run: uv run ruff check vbench_mem0

@@ -1,33 +1,21 @@
 # TODO
 
-This file tracks implementation TODOs. See ROADMAP.md for the high-level plan.
+Working list for the vbench MVP. See `ROADMAP.md` for version planning.
 
-## Critical Path (Phase 1)
+## Finish v0.1
 
-- [ ] Implement `LoCoMoLoader.download()` and `LoCoMoLoader.load()`
-- [ ] Implement `LongMemEvalLoader.download()` and `LongMemEvalLoader.load()`
-- [ ] Implement `Mem0Adapter` — requires mem0ai package and pgvector
-- [ ] Implement `MemoriAdapter` — requires gibson-memory package
-- [ ] Implement `GraphitiAdapter` — requires graphiti-core and falkordb packages
-- [ ] Implement `CogneeAdapter` — requires cognee package
-- [ ] Implement ingest pipeline stage
-- [ ] Implement index pipeline stage
-- [ ] Implement search pipeline stage
-- [ ] Implement answer pipeline stage (OpenAI-compatible LLM call)
-- [ ] Implement evaluate pipeline stage (judge LLM scoring)
-- [ ] Implement `JsonReporter.write()`
-- [ ] Implement `MarkdownReporter.write()`
-- [ ] Implement `vmb run` CLI command (wire up pipeline stages)
-- [ ] Implement `vmb compare` CLI command
-- [ ] Implement `vmb providers list` and `vmb providers check`
-- [ ] Implement `vmb datasets download` and `vmb datasets info`
-- [ ] Fill in SHA-256 hashes for dataset downloads
+- [ ] Run the end-to-end smoke test (`vbench eval --config examples/configs/mem0-locomo.yaml --max-items 2`) against a real Postgres instance and capture the first headline line.
+- [ ] Publish first MemScore JSON from a 1x + 4x run.
+- [ ] Verify LoCoMo schema handling against the actual upstream file; add fixtures for alternate shapes if encountered.
+- [ ] Replace whitespace-split token counting with a tokenizer that matches the answer LLM.
+- [ ] Add a `--dry-run` that exercises the sidecar lifecycle without hitting the LLM APIs.
 
-## Phase 2
+## v0.2 (tracked here until moved into Issues)
 
-- [ ] Implement `TranscriptReplayStage`
-- [ ] Implement `LatencyProfile`
-- [ ] Implement `IsolationAuditStage`
-- [ ] Implement `VoiceMemoryWorker` (LiveKit Agents)
-- [ ] Implement `DeepgramSTTAdapter`
-- [ ] Implement `CartesiaTTSAdapter`
+- [ ] `sidecars/memori` package + provider/memori docker-compose.
+- [ ] `sidecars/graphiti` package + provider/graphiti docker-compose.
+- [ ] `sidecars/cognee` package + provider/cognee docker-compose.
+- [ ] 16x concurrency level with explicit queue/back-pressure modelling.
+- [ ] LongMemEval loader.
+- [ ] Custom JSONL loader.
+- [ ] `vbench compare <run-id> <run-id>` command.

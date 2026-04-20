@@ -1,71 +1,115 @@
 # Architecture
 
-## Overview
+## Shape
 
-`voice-memory-bench` is a five-stage pipeline:
+```
++---------------+       HTTP / 127.0.0.1        +------------------+
+|   vbench      | ----------------------------> |  Python sidecar  |
+|  (Go engine)  | <---------------------------- |  (e.g. mem0ai)   |
++---------------+                                +------------------+
+      |                                                 |
+      |                                                 |
+      v                                                 v
++----------------+                             +----------------+
+| runs/<run_id>/ |                             | Postgres +     |
+|   artifacts    |                             | pgvector / ... |
++----------------+                             +----------------+
+```
+
+The Go engine is the process of record: it owns the CLI, the pipeline, the
+clock used for latency numbers, and the output artifacts. The Python sidecar
+is a thin HTTP wrapper around the provider SDK.
+
+## Why Go + Python sidecars
+
+1. **Distribution.** `vbench` is a single static binary. No interpreter,
+   no venv, no version pinning on the consumer side. Agents can ship it the
+   way they ship `kubectl`.
+2. **p99 honesty.** Memory-provider latency is what voice agents feel. The
+   Go scheduler has sub-ms GC pauses; the GIL does not. Measuring timing
+   inside the Python SDK would leak interpreter jitter into the reported
+   p99 and invalidate the voice verdict.
+3. **Provider SDKs are Python-first.** Every target framework (Mem0, Memori,
+   Graphiti, Cognee) ships a Python SDK as its canonical integration surface.
+   The sidecar uses that surface directly rather than reimplementing it in Go.
+4. **Cloud-mode parity.** The HTTP boundary mirrors what the cloud variants
+   of these providers expose. Pointing `vbench` at a cloud endpoint later is a
+   config change, not an engine rewrite.
+
+**Latency is measured in the Go engine, never in the sidecar.** The sidecar's
+self-reported `latency_ms` exists as a reference for debugging; the voice
+verdict is driven by the Go-side wall clock around each HTTP call.
+
+## Pipeline
 
 ```
 ingest → index → search → answer → evaluate
 ```
 
-Each stage reads from the previous stage's artifact directory and writes its own artifacts. Stages are independently resumable: re-running with the same `run_id` skips any stage whose output artifact already exists and is marked `COMPLETE`.
+Each stage writes a `.complete` sentinel. Re-running with `--run-id <id>`
+picks up from the first stage without a sentinel, so a crash mid-index does
+not reset ingestion.
 
-## Pipeline Stages
+| Stage     | Input                                  | Output                                                    |
+|-----------|----------------------------------------|-----------------------------------------------------------|
+| ingest    | Dataset (LoCoMo)                       | `runs/<id>/ingest/<item>.json`                            |
+| index     | BenchmarkItems                         | `runs/<id>/index/<item>.json` (per-turn write latency)    |
+| search    | BenchmarkItems + sidecar               | `runs/<id>/search/<level>x/<item>__<q>.json` per level    |
+| answer    | Search artifacts                       | `runs/<id>/answer/<level>x/<item>__<q>.json`              |
+| evaluate  | Search + Answer + judge LLM            | `runs/<id>/evaluate/<level>x/*.json` + `_memscore.json`   |
 
-### 1. Ingest
-**Input:** Dataset (LoCoMo, LongMemEval, or custom JSONL)
-**Output:** `runs/<run_id>/ingest/*.jsonl` — one `BenchmarkItem` per line
+The search + answer + evaluate stages run once per concurrency level (MVP: 1x
+and 4x). Index writes are serial — voice agents also write sequentially during
+a call, and serial writes isolate the search measurement from write-path noise.
 
-Normalises dataset-specific formats into the canonical `BenchmarkItem` schema. Each item contains a conversation history and one or more evaluation questions with reference answers.
+## HTTP contract (engine → sidecar)
 
-### 2. Index
-**Input:** `BenchmarkItem` list from ingest
-**Output:** `runs/<run_id>/index/*.json` — one `IndexArtifact` per item
+- `GET /health` — liveness.
+- `GET /capabilities` — provider metadata (supported retrieval modes, etc.).
+- `POST /add_message` — write a conversation turn.
+- `POST /add_fact` — write a pre-extracted fact.
+- `POST /search` — retrieve memories. Unsupported modes return `422` with
+  `error_type=capability_not_supported`, which the engine surfaces as a
+  SKIPPED result.
+- `POST /enumerate` — list all memories for a user (used for recall without
+  an extra LLM round-trip).
+- `POST /reset` — wipe memory for a user/session. Called once per item to
+  isolate callers.
 
-Calls `adapter.add_message()` for each conversation turn (or `adapter.add_fact()` for pre-extracted facts). Records per-turn write latency. All writes must reach the backing store before the stage completes.
-
-### 3. Search
-**Input:** `BenchmarkItem` list + indexed memories
-**Output:** `runs/<run_id>/search/*.json` — one `SearchArtifact` per question
-
-Calls `adapter.search()` for each evaluation question. Records retrieval latency and the exact memory payload that would be injected into the prompt.
-
-### 4. Answer
-**Input:** `SearchArtifact` list
-**Output:** `runs/<run_id>/answer/*.json` — one `AnswerArtifact` per question
-
-Passes `memory_payload + question` to the answer LLM and records the completion, token counts, and latency.
-
-### 5. Evaluate
-**Input:** `AnswerArtifact` list + reference answers
-**Output:** `runs/<run_id>/evaluate/*.json` — one `EvaluationArtifact` per item
-
-Calls the judge LLM to score each completion against its reference answer. Computes `MemScore` triples (quality, latency, cost) across all items.
-
-## Adapter Interface
-
-Every provider adapter implements the `MemoryAdapter` protocol defined in `voice_memory_bench/core/adapter.py`. Key methods:
-
-| Method | Description |
-|--------|-------------|
-| `capabilities()` | Returns provider metadata and supported retrieval modes |
-| `health_check()` | Verifies the backing service is reachable |
-| `add_message()` | Writes a conversation turn |
-| `add_fact()` | Writes a pre-extracted fact |
-| `search()` | Retrieves relevant memories |
-| `enumerate_memories()` | Lists all memories for a user |
-| `reset()` | Deletes all memories for a user |
-
-## Artifact Schema
-
-All artifacts are Pydantic models serialised as JSON. See `voice_memory_bench/core/schemas.py` for the full definitions.
+The sidecar binds `127.0.0.1:$VBENCH_SIDECAR_PORT` (a free port the engine
+picks) and reads provider configuration from `$VBENCH_PROVIDER_CONFIG` (JSON).
+The engine launches and tears down the subprocess via a process group, so
+SIGINT on the engine cleans up the sidecar.
 
 ## MemScore
 
-MemScore is a triple, never a scalar:
+MemScore is a triple per (provider, concurrency) level. Never a scalar.
 
-- **Quality**: Normalised answer quality score [0, 1], computed by the judge LLM
-- **Latency**: p50/p95/p99 retrieval latency in milliseconds
-- **Cost**: Average cost per benchmark item in USD (0 for fully self-hosted providers)
+- **Quality** — mean judge-LLM score over all questions at this level.
+- **Latency** — p50, p95, p99 over search-stage wall-clock latencies.
+- **Cost** — USD per item (0 for self-hosted MVP).
+- **Token footprint** — median token count of the injected memory payload.
 
-The three axes are always reported side-by-side. Do not collapse to a single number.
+The voice verdict is computed only from search-stage p95:
+
+- `p95 < 300 ms` → EXCELLENT
+- `300 ≤ p95 ≤ 500 ms` → ACCEPTABLE
+- `p95 > 500 ms` → FAIL
+
+## Layout
+
+```
+cmd/vbench/          Cobra CLI (root, eval, datasets, providers)
+internal/
+  schema/            RunConfig, BenchmarkItem, artifacts, MemScore
+  adapter/           HTTP client, error envelope, retrieval types
+  sidecar/           subprocess lifecycle, Mem0 defaults
+  dataset/           loader interface, LoCoMo
+  llm/               OpenAI answer + judge client
+  concurrency/       worker pool, percentile helper
+  engine/            pipeline + 5 stages
+  report/            voice verdict + MemScore JSON writer
+sidecars/mem0/       Python FastAPI sidecar (uv-managed)
+providers/mem0/      docker-compose for Postgres + pgvector
+examples/configs/    example run configs
+```

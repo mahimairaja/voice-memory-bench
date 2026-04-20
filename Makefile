@@ -1,55 +1,45 @@
-.PHONY: help install lint typecheck test test-unit test-integration format clean
+.PHONY: help build vet test test-v tidy clean \
+	sidecar-sync sidecar-lint sidecar-test \
+	providers-up-mem0 providers-down-mem0
 
-PYTHON := python3
+GO := go
 UV := uv
+SIDECAR_DIR := sidecars/mem0
 
 help:  ## Show this help
-@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-24s\033[0m %s\n", $$1, $$2}'
 
-install:  ## Install all dependencies including dev extras
-$(UV) sync --extra dev
+build:  ## Compile the vbench CLI to ./vbench
+	$(GO) build -o vbench ./cmd/vbench
 
-lint:  ## Run ruff linter
-$(UV) run ruff check voice_memory_bench/ tests/ voice/
+vet:  ## Run go vet across all packages
+	$(GO) vet ./...
 
-typecheck:  ## Run mypy type checker
-$(UV) run mypy voice_memory_bench/
+test:  ## Run Go unit tests
+	$(GO) test ./...
 
-format:  ## Auto-format code with ruff
-$(UV) run ruff format voice_memory_bench/ tests/ voice/
-$(UV) run ruff check --fix voice_memory_bench/ tests/ voice/
+test-v:  ## Run Go unit tests, verbose
+	$(GO) test -v ./...
 
-test-unit:  ## Run unit tests (no external services)
-$(UV) run pytest -m unit --tb=short -q
+tidy:  ## go mod tidy
+	$(GO) mod tidy
 
-test-integration:  ## Run integration tests (requires live services)
-$(UV) run pytest -m integration --tb=short
+clean:  ## Remove build outputs
+	rm -f vbench coverage.txt coverage.html
+	rm -rf dist/
 
-test:  ## Run all tests
-$(UV) run pytest --tb=short
+sidecar-sync:  ## uv sync the Mem0 sidecar environment
+	cd $(SIDECAR_DIR) && $(UV) sync
 
-clean:  ## Remove build artifacts and caches
-rm -rf dist/ build/ *.egg-info/ .pytest_cache/ .mypy_cache/ .ruff_cache/
-find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-find . -type f -name "*.pyc" -delete
+sidecar-lint:  ## Lint the Mem0 sidecar
+	cd $(SIDECAR_DIR) && $(UV) run ruff check vbench_mem0
 
-datasets-download-all:  ## Download all benchmark datasets
-$(UV) run vmb datasets download locomo
-$(UV) run vmb datasets download longmemeval
+sidecar-test:  ## Run sidecar tests (if any)
+	cd $(SIDECAR_DIR) && $(UV) run pytest -q || true
 
-providers-up-mem0:  ## Start Mem0 Postgres
-docker compose -f providers/mem0/docker-compose.yml up -d
+providers-up-mem0:  ## Start Mem0 Postgres (pgvector)
+	docker compose -f providers/mem0/docker-compose.yml up -d
 
-providers-up-memori:  ## Start Memori Postgres
-docker compose -f providers/memori/docker-compose.yml up -d
-
-providers-up-graphiti:  ## Start Graphiti FalkorDB
-docker compose -f providers/graphiti/docker-compose.yml up -d
-
-providers-up-all:  ## Start all provider infrastructure
-$(MAKE) providers-up-mem0 providers-up-memori providers-up-graphiti
-
-providers-down:  ## Stop all provider infrastructure
-docker compose -f providers/mem0/docker-compose.yml down
-docker compose -f providers/memori/docker-compose.yml down
-docker compose -f providers/graphiti/docker-compose.yml down
+providers-down-mem0:  ## Stop Mem0 Postgres
+	docker compose -f providers/mem0/docker-compose.yml down

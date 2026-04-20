@@ -1,21 +1,21 @@
 ## Summary
 
-<!-- Describe what this PR does and why. -->
+<!-- What does this PR do and why. -->
 
 ## Changes
 
-- [ ] Core change 1
-- [ ] Core change 2
+- [ ] Change 1
+- [ ] Change 2
 
 ## Testing
 
-- [ ] Unit tests pass (`uv run pytest -m unit`)
-- [ ] Type check passes (`uv run mypy voice_memory_bench/`)
-- [ ] Lint passes (`uv run ruff check .`)
+- [ ] `go build ./...` clean
+- [ ] `go vet ./...` clean
+- [ ] `go test ./...` passes
+- [ ] Sidecar (if touched): `make sidecar-sync && make sidecar-lint`
 
 ## Checklist
 
-- [ ] I have read CONTRIBUTING.md
-- [ ] I have added/updated tests for my changes
-- [ ] I have updated documentation if needed
-- [ ] I have not introduced any provider-specific imports into `voice_memory_bench/core/`
+- [ ] I have read `CONTRIBUTING.md`.
+- [ ] I have updated docs/example configs if the HTTP contract moved.
+- [ ] I have not broken the sidecar HTTP contract without a version bump.
