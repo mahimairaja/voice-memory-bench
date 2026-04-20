@@ -159,19 +159,24 @@ class Mem0Adapter:
         self,
         *,
         user_id: str,
-        session_id: str,
+        session_id: str,  # noqa: ARG002 - accepted to match the vbench HTTP contract; Mem0 OSS's search() does not scope by agent_id, and we keep cross-session recall as the voice-realistic default.
         query: str,
         mode: str,
         top_k: int,
         filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if mode not in SUPPORTED_MODES:
+            # Voice-contract: unsupported modes surface as 422 capability_not_supported
+            # at the HTTP layer so the engine records them as SKIPPED.
             raise CapabilityNotSupported(
                 capability=mode,
                 reason=f"Mem0 OSS supports {sorted(SUPPORTED_MODES)}; got {mode!r}.",
             )
         start = time.perf_counter()
-        raw = self._client.search(query=query, user_id=user_id, limit=top_k)
+        kwargs: dict[str, Any] = {"query": query, "user_id": user_id, "limit": top_k}
+        if filters:
+            kwargs["filters"] = filters
+        raw = self._client.search(**kwargs)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
         items = _coerce_items(raw)
         payload = "\n".join(f"- {it['content']}" for it in items)

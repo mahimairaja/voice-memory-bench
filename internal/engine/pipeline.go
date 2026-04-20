@@ -51,9 +51,19 @@ type Options struct {
 }
 
 // NewRunID returns a short hex ID, suitable as a directory name.
+// crypto/rand.Read is documented to always succeed in practice, but if it
+// ever does fail we fall back to a UnixNano-derived suffix so we never
+// return an all-zero (non-unique) ID.
 func NewRunID() string {
 	b := make([]byte, 4)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: crypto/rand.Read failed, falling back to time-nanos: %v\n", err)
+		n := uint32(time.Now().UnixNano())
+		b[0] = byte(n)
+		b[1] = byte(n >> 8)
+		b[2] = byte(n >> 16)
+		b[3] = byte(n >> 24)
+	}
 	return time.Now().Format("20060102-150405") + "-" + hex.EncodeToString(b)
 }
 
@@ -99,7 +109,11 @@ func Run(ctx context.Context, opts Options) (*PipelineResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer side.Shutdown()
+	defer func() {
+		if err := side.Shutdown(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: sidecar shutdown: %v\n", err)
+		}
+	}()
 
 	caps, err := side.Client().Capabilities(ctx)
 	if err != nil {
