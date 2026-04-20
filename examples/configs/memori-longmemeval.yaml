@@ -1,0 +1,34 @@
+# Memori + LongMemEval benchmark run.
+#
+# Prerequisites:
+#   1. Start Postgres: docker compose -f providers/memori/docker-compose.yml up -d
+#   2. Set env: export POSTGRES_PASSWORD=changeme OPENAI_API_KEY=sk-...
+#   3. Download dataset: uv run vmb datasets download longmemeval
+#   4. Run: uv run vmb run examples/configs/memori-longmemeval.yaml
+
+run_name: memori-longmemeval
+
+dataset:
+  name: longmemeval
+  subset: s
+
+provider:
+  name: memori
+  config:
+    postgres_url: postgresql://memori:${POSTGRES_PASSWORD}@localhost:5433/memori
+
+answer_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+judge_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+concurrency: 1
+seed: 42
+output_dir: runs

@@ -1,0 +1,32 @@
+# Example run config using the Mem0 provider with the LoCoMo dataset.
+# Copy to your run directory and fill in the values.
+# Secrets should be set as environment variables, not hardcoded here.
+
+run_name: mem0-locomo-example
+
+dataset:
+  name: locomo
+  max_items: 50   # Set to null to run all items
+
+provider:
+  name: mem0
+  config:
+    postgres_url: postgresql://mem0:${POSTGRES_PASSWORD}@localhost:5432/mem0
+    llm_provider: openai
+    llm_model: gpt-4o-mini
+
+answer_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+judge_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+concurrency: 1
+seed: 42
+output_dir: runs

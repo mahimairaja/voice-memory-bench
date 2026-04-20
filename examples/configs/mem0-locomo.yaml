@@ -1,0 +1,38 @@
+# Mem0 + LoCoMo benchmark run.
+#
+# Prerequisites:
+#   1. Start Postgres: docker compose -f providers/mem0/docker-compose.yml up -d
+#   2. Set env: export POSTGRES_PASSWORD=changeme OPENAI_API_KEY=sk-...
+#   3. Download dataset: uv run vmb datasets download locomo
+#   4. Run: uv run vmb run examples/configs/mem0-locomo.yaml
+
+run_name: mem0-locomo
+
+dataset:
+  name: locomo
+  # max_items: 50  # Uncomment for a quick smoke test
+
+provider:
+  name: mem0
+  config:
+    postgres_url: postgresql://mem0:${POSTGRES_PASSWORD}@localhost:5432/mem0
+    llm_provider: openai
+    llm_model: gpt-4o-mini
+
+answer_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  max_tokens: 512
+  seed: 42
+
+judge_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  max_tokens: 256
+  seed: 42
+
+concurrency: 1
+seed: 42
+output_dir: runs

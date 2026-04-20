@@ -1,0 +1,29 @@
+# Minimal self-hosted stack for the Memori adapter.
+# Provides: PostgreSQL 16 (no pgvector required).
+#
+# Usage:
+#   docker compose -f providers/memori/docker-compose.yml up -d
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vmb-memori-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: memori
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: memori
+    ports:
+      - "5433:5432"
+    volumes:
+      - memori_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memori"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  memori_pgdata:

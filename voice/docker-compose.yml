@@ -1,0 +1,30 @@
+# Self-hosted LiveKit + SIP stack for voice benchmarks (Phase 2).
+#
+# This is a sketch — not production-ready. See voice/README.md for details.
+#
+# Usage:
+#   docker compose -f voice/docker-compose.yml up -d
+
+version: "3.9"
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: vmb-livekit
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+    command: --dev --bind 0.0.0.0
+
+  redis:
+    image: redis:7-alpine
+    container_name: vmb-livekit-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+volumes: {}
