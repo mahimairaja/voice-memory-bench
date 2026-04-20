@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"os"
 	"testing"
 )
 
@@ -78,7 +77,7 @@ func TestExpandEnv_recurses(t *testing.T) {
 }
 
 func TestApplyEnvExpansion_noop(t *testing.T) {
-	_ = os.Setenv("NOT_PRESENT", "")
+	t.Setenv("NOT_PRESENT", "")
 	c := &RunConfig{Provider: ProviderConfig{Config: nil}}
 	c.ApplyEnvExpansion()
 }

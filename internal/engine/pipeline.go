@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mahimairaja/vbench/internal/adapter"
 	"github.com/mahimairaja/vbench/internal/dataset"
 	"github.com/mahimairaja/vbench/internal/llm"
 	"github.com/mahimairaja/vbench/internal/report"
@@ -110,9 +109,19 @@ func Run(ctx context.Context, opts Options) (*PipelineResult, error) {
 		fmt.Fprintf(os.Stderr, "sidecar ready: %s v%s modes=%v\n", caps.ProviderName, caps.ProviderVersion, caps.SupportedRetrievalModes)
 	}
 
-	// Answer + judge clients
-	ansKey := os.Getenv(cfg.AnswerLLM.APIKeyEnv)
-	jdgKey := os.Getenv(cfg.JudgeLLM.APIKeyEnv)
+	// Answer + judge LLM clients. The engine is a boundary: surface a clear
+	// error if either configured api_key_env is unset so the user isn't left
+	// to decode a downstream 401 from the model provider. A BaseURL pointing
+	// at a local/self-hosted endpoint without auth is still allowed via an
+	// empty api_key_env.
+	ansKey, err := requireAPIKey("answer_llm", cfg.AnswerLLM)
+	if err != nil {
+		return nil, err
+	}
+	jdgKey, err := requireAPIKey("judge_llm", cfg.JudgeLLM)
+	if err != nil {
+		return nil, err
+	}
 	answerLLM := llm.New(cfg.AnswerLLM, ansKey)
 	judgeLLM := llm.New(cfg.JudgeLLM, jdgKey)
 
@@ -231,5 +240,15 @@ func markComplete(dir string) error {
 	return f.Close()
 }
 
-// silence unused-import warning for adapter if no stage imports it
-var _ = adapter.ModeSemantic
+func requireAPIKey(role string, cfg schema.LLMConfig) (string, error) {
+	if cfg.APIKeyEnv == "" {
+		// No env var name set — caller has declared this endpoint does not
+		// require auth (typical for a self-hosted vLLM/Ollama behind BaseURL).
+		return "", nil
+	}
+	v := os.Getenv(cfg.APIKeyEnv)
+	if v == "" {
+		return "", fmt.Errorf("%s.api_key_env=%q is not set in the environment", role, cfg.APIKeyEnv)
+	}
+	return v, nil
+}

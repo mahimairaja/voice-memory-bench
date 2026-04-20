@@ -8,8 +8,11 @@ provider-agnostic so new adapters can be added without touching it.
 from __future__ import annotations
 
 import importlib.metadata
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     from mem0 import Memory  # type: ignore[import-untyped]
@@ -180,11 +183,14 @@ class Mem0Adapter:
         return _coerce_items(raw)
 
     def reset(self, *, user_id: str, session_id: str | None = None) -> None:
+        # Upstream mem0 can raise when the user has no memories to delete —
+        # we log the failure at warning level so benign no-ops are visible
+        # in sidecar logs without aborting the benchmark, but real
+        # auth/network errors are not silently discarded.
         try:
             self._client.delete_all(user_id=user_id)
-        except Exception:
-            # Upstream sometimes raises if the user has no memories yet.
-            pass
+        except Exception as exc:  # noqa: BLE001 - mem0 does not expose typed errors
+            logger.warning("mem0 reset(user_id=%s) failed: %s", user_id, exc)
 
 
 def _coerce_items(raw: Any) -> list[dict[str, Any]]:

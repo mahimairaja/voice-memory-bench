@@ -25,8 +25,10 @@ type LevelReport struct {
 	MemScore    schema.MemScore `json:"memscore"`
 }
 
-// WriteJSON emits the MemScore report for all concurrency levels.
-func WriteJSON(path, provider, dataset, runID string, levels []schema.MemScore) error {
+// WriteJSON emits the MemScore report for all concurrency levels. Surfaces
+// Close() errors after a successful encode so a failed flush on the final
+// report is not silently swallowed.
+func WriteJSON(path, provider, dataset, runID string, levels []schema.MemScore) (err error) {
 	rep := Report{
 		RunID:    runID,
 		Provider: provider,
@@ -48,7 +50,11 @@ func WriteJSON(path, provider, dataset, runID string, levels []schema.MemScore) 
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	return enc.Encode(rep)

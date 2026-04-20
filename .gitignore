@@ -12,14 +12,14 @@ sidecars/**/__pycache__/
 sidecars/**/*.egg-info/
 **/.pytest_cache/
 **/__pycache__/
-*.pyc
 *.py[cod]
 
 # Run output
 /runs/
 /artifacts/
-/datasets/locomo/data/
-/datasets/**/*.json
+# Generated dataset caches only (keep committed fixtures and READMEs).
+/datasets/cache/
+/datasets/*/data/
 !datasets/**/README.md
 
 # IDE / OS

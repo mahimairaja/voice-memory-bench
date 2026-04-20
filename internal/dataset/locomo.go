@@ -1,6 +1,7 @@
 package dataset
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/mahimairaja/vbench/internal/schema"
 )
@@ -36,8 +38,11 @@ func (l *LoCoMo) IsCached(cacheDir string) bool {
 	return err == nil && info.Size() > 0
 }
 
-// Download fetches the LoCoMo JSON into cacheDir.
-func (l *LoCoMo) Download(cacheDir string) error {
+// Download fetches the LoCoMo JSON into cacheDir. Cancellable via ctx.
+// Surfaces Close() errors so a failed flush is not silently accepted into the
+// cache — the next `IsCached` call could otherwise see a truncated file and
+// skip redownloading.
+func (l *LoCoMo) Download(ctx context.Context, cacheDir string) (err error) {
 	dst := l.dataPath(cacheDir)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("mkdir cache: %w", err)
@@ -45,7 +50,11 @@ func (l *LoCoMo) Download(cacheDir string) error {
 	if l.IsCached(cacheDir) {
 		return nil
 	}
-	resp, err := http.Get(locomoURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, locomoURL, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("download locomo: %w", err)
 	}
@@ -57,7 +66,11 @@ func (l *LoCoMo) Download(cacheDir string) error {
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", dst, cerr)
+		}
+	}()
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return fmt.Errorf("write %s: %w", dst, err)
 	}
@@ -109,8 +122,8 @@ func (l *LoCoMo) Load(cacheDir, subset string, maxItems int) ([]schema.Benchmark
 		if maxItems > 0 && len(items) >= maxItems {
 			break
 		}
-		itemID := r.SampleID
-		if itemID == "" {
+		itemID := SafeID(r.SampleID)
+		if itemID == "_" || itemID == "" {
 			itemID = fmt.Sprintf("locomo_%d", i)
 		}
 		userID := "locomo_user_" + itemID
@@ -130,7 +143,7 @@ func (l *LoCoMo) Load(cacheDir, subset string, maxItems int) ([]schema.Benchmark
 				cat = strconv.FormatFloat(n, 'f', -1, 64)
 			}
 			questions = append(questions, schema.EvaluationQuestion{
-				QuestionID:      fmt.Sprintf("%s_q%d", itemID, qi),
+				QuestionID:      SafeID(fmt.Sprintf("%s_q%d", itemID, qi)),
 				Question:        qa.Question,
 				ReferenceAnswer: ans,
 				QuestionType:    cat,
@@ -204,13 +217,6 @@ func decodeTurns(raw json.RawMessage, sessionID, userID string) ([]schema.Conver
 	}
 	out := make([]schema.ConversationTurn, 0, len(rawTurns))
 	for i, t := range rawTurns {
-		role := "user"
-		// LoCoMo dialogues are peer-to-peer; we treat speaker_a as user and
-		// speaker_b as assistant for the purpose of write routing. Either way,
-		// both are persisted with speaker metadata for recall.
-		if t.Speaker != "" && i%2 == 1 {
-			role = "assistant"
-		}
 		turnID := t.DiaID
 		if turnID == "" {
 			turnID = fmt.Sprintf("%s_t%d", sessionID, i)
@@ -219,12 +225,34 @@ func decodeTurns(raw json.RawMessage, sessionID, userID string) ([]schema.Conver
 			TurnID:    turnID,
 			SessionID: sessionID,
 			UserID:    userID,
-			Role:      role,
+			Role:      roleFromSpeaker(t.Speaker, i),
 			Content:   t.Text,
 			Metadata:  map[string]string{"speaker": t.Speaker},
 		})
 	}
 	return out, nil
+}
+
+// roleFromSpeaker maps a LoCoMo speaker label to a voice-agent role. LoCoMo
+// dialogues are peer-to-peer (speaker_a / speaker_b or similar); we treat the
+// "a" side as user and the "b" side as assistant. When the speaker label is
+// missing, we fall back to alternating by turn index so the write path still
+// produces a coherent role sequence.
+func roleFromSpeaker(speaker string, turnIdx int) string {
+	s := strings.ToLower(strings.TrimSpace(speaker))
+	switch {
+	case strings.HasSuffix(s, "_b"), s == "b":
+		return "assistant"
+	case strings.HasSuffix(s, "_a"), s == "a":
+		return "user"
+	case s == "":
+		if turnIdx%2 == 1 {
+			return "assistant"
+		}
+		return "user"
+	default:
+		return "user"
+	}
 }
 
 func stringifyAnswer(a interface{}) string {

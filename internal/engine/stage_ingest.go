@@ -10,6 +10,9 @@ import (
 // ingest writes the normalised benchmark items to disk so downstream stages
 // have a stable input artifact. For LoCoMo (already in-memory) this is mostly
 // a consistency checkpoint, but it keeps all stages uniform and resumable.
+//
+// ItemID is assumed safe as a filename component — that is a loader
+// invariant enforced at the dataset boundary (see internal/dataset).
 func (p *Pipeline) ingest(ctx context.Context) error {
 	dir := stageDir(p.ArtifactDir, "ingest")
 	if stageComplete(dir) {
@@ -22,6 +25,9 @@ func (p *Pipeline) ingest(ctx context.Context) error {
 		return err
 	}
 	for _, item := range p.Items {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err := writeJSON(filepath.Join(dir, item.ItemID+".json"), item); err != nil {
 			return err
 		}

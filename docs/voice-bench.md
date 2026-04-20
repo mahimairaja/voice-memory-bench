@@ -8,7 +8,7 @@ why we measure what we measure, and what Phase 3 adds.
 
 A voice agent runs a tight loop:
 
-```
+```text
 user speech → STT → LLM (turn plan) → memory retrieve → LLM (final) → TTS → user ear
 ```
 

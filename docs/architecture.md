@@ -2,7 +2,7 @@
 
 ## Shape
 
-```
+```text
 +---------------+       HTTP / 127.0.0.1        +------------------+
 |   vbench      | ----------------------------> |  Python sidecar  |
 |  (Go engine)  | <---------------------------- |  (e.g. mem0ai)   |
@@ -42,7 +42,7 @@ verdict is driven by the Go-side wall clock around each HTTP call.
 
 ## Pipeline
 
-```
+```text
 ingest → index → search → answer → evaluate
 ```
 
@@ -98,7 +98,7 @@ The voice verdict is computed only from search-stage p95:
 
 ## Layout
 
-```
+```text
 cmd/vbench/          Cobra CLI (root, eval, datasets, providers)
 internal/
   schema/            RunConfig, BenchmarkItem, artifacts, MemScore

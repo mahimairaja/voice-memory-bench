@@ -34,7 +34,15 @@ func Run[R any](ctx context.Context, n int, concurrency int, fn Task[R]) []Resul
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		i := i
-		sem <- struct{}{}
+		// Acquire a slot, but bail out if ctx is cancelled while we're waiting
+		// for in-flight workers to release one. Without this, a cancelled run
+		// can block forever on a full semaphore.
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			results[i] = Result[R]{Index: i, Err: ctx.Err()}
+			continue
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

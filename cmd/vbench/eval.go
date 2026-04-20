@@ -57,12 +57,17 @@ func newEvalCmd() *cobra.Command {
 }
 
 func loadConfig(path string) (*schema.RunConfig, error) {
-	buf, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
+	defer f.Close()
+	dec := yaml.NewDecoder(f)
+	// Reject unknown keys so typos in a run config fail fast rather than
+	// silently doing something different from what the author expected.
+	dec.KnownFields(true)
 	var cfg schema.RunConfig
-	if err := yaml.Unmarshal(buf, &cfg); err != nil {
+	if err := dec.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
 	if err := cfg.Validate(); err != nil {

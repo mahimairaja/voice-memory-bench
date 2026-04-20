@@ -138,7 +138,9 @@ type JudgeVerdict struct {
 var judgeScorePattern = regexp.MustCompile(`(?i)score\s*[:=]\s*([0-1](?:\.\d+)?)`)
 
 // Judge runs the judge LLM on (question, reference answer, candidate answer)
-// and returns a [0,1] score plus a short rationale.
+// and returns a [0,1] score plus the judge's rationale text. A malformed
+// response (no parseable Score line) is surfaced as an error rather than
+// silently returning 0.0, which would corrupt the aggregate quality.
 func (c *Client) Judge(ctx context.Context, question, reference, candidate string) (*JudgeVerdict, error) {
 	system := "You grade answers for factual correctness against a reference. Respond with exactly two lines:\nScore: <number between 0 and 1, where 1 means the candidate matches the reference and 0 means it does not>\nRationale: <one sentence>"
 	user := fmt.Sprintf("Question: %s\nReference answer: %s\nCandidate answer: %s", question, reference, candidate)
@@ -149,17 +151,19 @@ func (c *Client) Judge(ctx context.Context, question, reference, candidate strin
 	if err != nil {
 		return nil, err
 	}
-	v := &JudgeVerdict{Rationale: comp.Text}
-	if m := judgeScorePattern.FindStringSubmatch(comp.Text); len(m) == 2 {
-		if f, err := strconv.ParseFloat(m[1], 64); err == nil {
-			if f < 0 {
-				f = 0
-			}
-			if f > 1 {
-				f = 1
-			}
-			v.Score = f
-		}
+	m := judgeScorePattern.FindStringSubmatch(comp.Text)
+	if len(m) != 2 {
+		return nil, fmt.Errorf("judge response has no parseable Score line: %q", comp.Text)
 	}
-	return v, nil
+	f, err := strconv.ParseFloat(m[1], 64)
+	if err != nil {
+		return nil, fmt.Errorf("judge score %q is not a number: %w", m[1], err)
+	}
+	if f < 0 {
+		f = 0
+	}
+	if f > 1 {
+		f = 1
+	}
+	return &JudgeVerdict{Score: f, Rationale: comp.Text}, nil
 }

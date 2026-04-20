@@ -149,6 +149,18 @@ func waitReady(ctx context.Context, client *adapter.Client, timeout time.Duratio
 	}
 }
 
+// freePort asks the kernel for an ephemeral port by binding to :0, then
+// closes the listener and returns the port so the sidecar subprocess can
+// bind it moments later. This is a narrow TOCTOU race — another process on
+// the same loopback could steal the port between Close() and the sidecar's
+// bind — but for local benchmarking on 127.0.0.1 the window is microseconds
+// wide and the impact is a retryable startup failure, not data loss. The
+// alternative (passing a pre-bound listener into uvicorn via the sidecar) is
+// not worth the complexity at this stage.
+//
+// net.Listen is called without a context because the bind is effectively
+// non-blocking on loopback. Listener Close errors on an ephemeral port are
+// not actionable and are intentionally ignored.
 func freePort() (int, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

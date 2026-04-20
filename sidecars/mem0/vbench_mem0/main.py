@@ -20,6 +20,12 @@ def run() -> None:
     except ValueError:
         print(f"VBENCH_SIDECAR_PORT must be an integer, got {port_raw!r}", file=sys.stderr)
         sys.exit(2)
+    if not (1 <= port <= 65535):
+        print(
+            f"VBENCH_SIDECAR_PORT must be an integer in 1-65535, got {port}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     app = build_app()
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

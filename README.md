@@ -9,7 +9,7 @@ memory framework (Mem0 today; Memori / Graphiti / Cognee on the roadmap) is
 The headline output is one line per concurrency level, so a non-technical user
 or an agent downstream can act on it without parsing tables:
 
-```
+```text
 mem0 @ 1x: EXCELLENT  (p95 = 210 ms, quality = 0.74, tokens = 390)
 mem0 @ 4x: ACCEPTABLE (p95 = 380 ms, quality = 0.72, tokens = 420)
 ```
@@ -73,7 +73,7 @@ export OPENAI_API_KEY=sk-...
 
 ## Layout
 
-```
+```text
 cmd/vbench/         # Cobra CLI (root, eval, datasets, providers)
 internal/
   schema/           # Benchmark, artifacts, MemScore, RunConfig

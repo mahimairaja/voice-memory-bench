@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"sort"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -25,9 +28,7 @@ func newDatasetsListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List available datasets",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			names := dataset.Names()
-			sort.Strings(names)
-			for _, n := range names {
+			for _, n := range dataset.Names() {
 				fmt.Println(n)
 			}
 			return nil
@@ -50,7 +51,9 @@ func newDatasetsDownloadCmd() *cobra.Command {
 				fmt.Printf("%s already cached at %s\n", args[0], cache)
 				return nil
 			}
-			if err := l.Download(cache); err != nil {
+			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer cancel()
+			if err := l.Download(ctx, cache); err != nil {
 				return err
 			}
 			fmt.Printf("downloaded %s → %s\n", args[0], cache)

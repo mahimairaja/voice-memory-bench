@@ -12,9 +12,9 @@ Working list for the vbench MVP. See `ROADMAP.md` for version planning.
 
 ## v0.2 (tracked here until moved into Issues)
 
-- [ ] `sidecars/memori` package + provider/memori docker-compose.
-- [ ] `sidecars/graphiti` package + provider/graphiti docker-compose.
-- [ ] `sidecars/cognee` package + provider/cognee docker-compose.
+- [ ] `sidecars/memori` package + `providers/memori` docker-compose.
+- [ ] `sidecars/graphiti` package + `providers/graphiti` docker-compose.
+- [ ] `sidecars/cognee` package + `providers/cognee` docker-compose.
 - [ ] 16x concurrency level with explicit queue/back-pressure modelling.
 - [ ] LongMemEval loader.
 - [ ] Custom JSONL loader.
