@@ -1,0 +1,27 @@
+# Self-hosted stack for the Graphiti adapter.
+# Provides: FalkorDB (Redis + graph module).
+#
+# Usage:
+#   docker compose -f providers/graphiti/docker-compose.yml up -d
+#
+# FalkorDB speaks the Redis wire protocol on port 6379.
+
+version: "3.9"
+
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: vmb-graphiti-falkordb
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - graphiti_falkordb_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  graphiti_falkordb_data:

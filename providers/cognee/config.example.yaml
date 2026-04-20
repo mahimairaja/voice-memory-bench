@@ -1,0 +1,28 @@
+run_name: cognee-locomo-example
+
+dataset:
+  name: locomo
+  max_items: 50
+
+provider:
+  name: cognee
+  config:
+    data_dir: ./cognee_data
+    llm_provider: openai
+    llm_model: gpt-4o-mini
+
+answer_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+judge_llm:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  temperature: 0.0
+  seed: 42
+
+concurrency: 1
+seed: 42
+output_dir: runs

@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "voice-memory-bench"
+version = "0.1.0"
+description = "A Python benchmarking harness that compares self-hostable AI agent memory frameworks under voice-agent latency conditions"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [{name = "Mahimai Raja J", email = "mahimairaja@mahimai.ai"}]
+keywords = ["memory", "benchmark", "voice", "agent", "llm"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.0",
+    "structlog>=24.0",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "rich>=13.0",
+    "aiofiles>=23.0",
+]
+
+[project.optional-dependencies]
+mem0 = ["mem0ai>=0.1"]
+memori = ["gibson-memory>=0.1"]
+graphiti = ["graphiti-core>=0.3", "falkordb>=1.0"]
+cognee = ["cognee>=0.1"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.9",
+    "ruff>=0.4",
+    "hypothesis>=6.100",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+vmb = "voice_memory_bench.cli.main:app"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A", "C4", "RUF"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "unit: unit tests (no external services)",
+    "integration: integration tests (requires live services)",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["voice_memory_bench"]
